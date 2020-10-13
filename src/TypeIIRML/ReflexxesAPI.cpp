@@ -52,6 +52,7 @@
 #include <RMLVelocityInputParameters.h>
 #include <RMLVelocityOutputParameters.h>
 #include <RMLVelocityFlags.h>
+#include <iostream>
 
 
 //****************************************************************************
