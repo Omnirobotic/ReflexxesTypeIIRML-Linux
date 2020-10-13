@@ -52,7 +52,6 @@
 #include <RMLVelocityInputParameters.h>
 #include <RMLVelocityOutputParameters.h>
 #include <RMLVelocityFlags.h>
-#include <iostream>
 
 
 //****************************************************************************
@@ -94,7 +93,6 @@ int ReflexxesAPI::RMLPosition(      const RMLPositionInputParameters    &InputVa
                                 ,   RMLPositionOutputParameters         *OutputValues
                                 ,   const RMLPositionFlags              &Flags)
 {
-    std::cout << "REFLEXXES-NEW" << std::endl;
     return(((TypeIIRMLPosition*)(this->RMLPositionObject))->GetNextStateOfMotion(       InputValues
                                                                                     ,   OutputValues
                                                                                     ,   Flags           ));
