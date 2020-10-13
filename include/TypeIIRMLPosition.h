@@ -389,6 +389,8 @@ protected:
     };
 
 
+	void AdjustTargetVelocity(bool startANewCalculation , bool filterTargetVelocity);
+
 //  ---------------------- Doxygen info ----------------------
 //! \fn void CompareInitialAndTargetStateofMotion(void)
 //!
@@ -1108,6 +1110,10 @@ protected:
     RMLDoubleVector             *StoredTargetPosition;
 
 
+	RMLBoolVector* _isTargetVelocityAdjusted;
+	RMLDoubleVector* _adjustedTargetVelocity;
+	RMLDoubleVector* _velocityAdjustPercentage;
+	double			_velocityAdjustCoefficient;
 //  ---------------------- Doxygen info ----------------------
 //! \var RMLDoubleVector *MinimumExecutionTimes
 //!

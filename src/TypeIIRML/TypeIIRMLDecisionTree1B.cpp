@@ -65,7 +65,8 @@ void TypeIIRMLMath::TypeIIRMLDecisionTree1B(    const double    &CurrentPosition
                 ,   ThisTargetPosition      =   TargetPosition
                 ,   ThisTargetVelocity      =   TargetVelocity      ;
 
-    *MaximalExecutionTime   =   0.0;
+    *MaximalExecutionTime   =   0.0;    
+    double newTargetVelocity = 0;
 
     // ********************************************************************
     if (Decision_1B__001(ThisCurrentVelocity))
@@ -126,10 +127,10 @@ MDecision_1B__005:
                             ,   ThisCurrentVelocity
                             ,   ThisTargetPosition
                             ,   ThisTargetVelocity
-                            ,   MaxAcceleration         ))
-    {
-        goto MDecision_1B__006;
-    }
+                            ,   MaxAcceleration))
+	{
+		goto MDecision_1B__006;
+	}
     else
     {
         *MaximalExecutionTime   =   RML_INFINITY;

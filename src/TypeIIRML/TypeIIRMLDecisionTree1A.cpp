@@ -60,14 +60,16 @@ void TypeIIRMLMath::TypeIIRMLDecisionTree1A(    const double    &CurrentPosition
                                             ,   const double    &MaxVelocity
                                             ,   const double    &MaxAcceleration
                                             ,   Step1_Profile   *AppliedProfile
-                                            ,   double          *MinimalExecutionTime   )
+                                            ,   double          *MinimalExecutionTime	)
+											
 {
-    bool            IntermediateInversion   =   false;
+	bool IntermediateInversion = false;
 
-    double          ThisCurrentPosition     =   CurrentPosition
-                ,   ThisCurrentVelocity     =   CurrentVelocity
-                ,   ThisTargetPosition      =   TargetPosition
-                ,   ThisTargetVelocity      =   TargetVelocity      ;
+	double
+		ThisCurrentPosition = CurrentPosition
+		, ThisCurrentVelocity = CurrentVelocity
+		, ThisTargetPosition = TargetPosition
+		, ThisTargetVelocity = TargetVelocity;
 
     *MinimalExecutionTime   =   0.0;
 
@@ -78,34 +80,33 @@ void TypeIIRMLMath::TypeIIRMLDecisionTree1A(    const double    &CurrentPosition
     }
     else
     {
-        NegateStep1(        &ThisCurrentPosition
+	   NegateStep1(        &ThisCurrentPosition
                         ,   &ThisCurrentVelocity
                         ,   &ThisTargetPosition
                         ,   &ThisTargetVelocity );
-
+		
         goto MDecision_1A__002;
     }
     // ********************************************************************
 MDecision_1A__002:
-    if (Decision_1A__002(       ThisCurrentVelocity
-                            ,   MaxVelocity         ))
-    {
-        goto MDecision_1A__003;
-    }
-    else
-    {
-        VToVMaxStep1(       MinimalExecutionTime
-                        ,   &ThisCurrentPosition
-                        ,   &ThisCurrentVelocity
-                        ,   MaxVelocity
-                        ,   MaxAcceleration     );
+	if (Decision_1A__002(ThisCurrentVelocity, MaxVelocity))
+	{
+		goto MDecision_1A__003;
+	}
+	else
+	{
+		VToVMaxStep1(MinimalExecutionTime
+			, &ThisCurrentPosition
+			, &ThisCurrentVelocity
+			, MaxVelocity
+			, MaxAcceleration);
 
-        goto MDecision_1A__003;
-    }
+		goto MDecision_1A__003;
+	}
+	
     // ********************************************************************
 MDecision_1A__003:
-    if (Decision_1A__003(       ThisCurrentVelocity
-                            ,   ThisTargetVelocity  ))
+    if (Decision_1A__003(ThisCurrentVelocity,ThisTargetVelocity))
     {
         goto MDecision_1A__004;
     }
@@ -114,14 +115,14 @@ MDecision_1A__003:
         goto MDecision_1A__006;
     }
     // ********************************************************************
-MDecision_1A__004:
+MDecision_1A__004: 
     if (Decision_1A__004(       ThisCurrentPosition
                             ,   ThisCurrentVelocity
                             ,   ThisTargetPosition
                             ,   ThisTargetVelocity
-                            ,   MaxAcceleration         ))
+                            ,   MaxAcceleration	))
     {
-        goto MDecision_1A__005;
+		goto MDecision_1A__005;
     }
     else
     {

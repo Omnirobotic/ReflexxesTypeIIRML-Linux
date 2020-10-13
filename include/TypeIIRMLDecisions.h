@@ -201,11 +201,11 @@ bool Decision_1B__004(      const double &CurrentVelocity
 //! \brief
 //! If v->vtrgt, is p<=ptrgt?
 //  ----------------------------------------------------------
-bool Decision_1B__005(      const double &CurrentPosition
-                        ,   const double &CurrentVelocity
-                        ,   const double &TargetPosition
-                        ,   const double &TargetVelocity
-                        ,   const double &MaxAcceleration);
+bool Decision_1B__005(const double &CurrentPosition
+	, const double &CurrentVelocity
+	, const double &TargetPosition
+	, const double &TargetVelocity
+	, const double &MaxAcceleration);
 
 
 //  ---------------------- Doxygen info ----------------------

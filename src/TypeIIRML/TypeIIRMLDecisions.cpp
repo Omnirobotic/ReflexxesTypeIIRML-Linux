@@ -84,9 +84,11 @@ bool TypeIIRMLMath::Decision_1A__004(       const double &CurrentPosition
                                         ,   const double &TargetVelocity
                                         ,   const double &MaxAcceleration)
 {
-    return(     (CurrentPosition + 0.5 * (pow2(TargetVelocity)
+	
+   return(     (CurrentPosition + 0.5 * (pow2(TargetVelocity)
                 - pow2(CurrentVelocity)) / MaxAcceleration)
             <=  TargetPosition);
+	
 }
 
 
@@ -214,11 +216,11 @@ bool TypeIIRMLMath::Decision_1B__005(       const double &CurrentPosition
                                         ,   const double &TargetVelocity
                                         ,   const double &MaxAcceleration)
 {
-    return(Decision_1A__004(    CurrentPosition
-                            ,   CurrentVelocity
-                            ,   TargetPosition
-                            ,   TargetVelocity
-                            ,   MaxAcceleration     ));
+	return(Decision_1A__004(CurrentPosition
+		, CurrentVelocity
+		, TargetPosition
+		, TargetVelocity
+		, MaxAcceleration));
 }
 
 

@@ -118,7 +118,7 @@ void TypeIIRMLDecisionTree1A(       const double    &CurrentPosition
                                 ,   const double    &MaxVelocity
                                 ,   const double    &MaxAcceleration
                                 ,   Step1_Profile   *AppliedProfile
-                                ,   double          *MinimalExecutionTime   );
+                                ,   double          *MinimalExecutionTime	);
 
 
 }   // namespace TypeIIRMLMath

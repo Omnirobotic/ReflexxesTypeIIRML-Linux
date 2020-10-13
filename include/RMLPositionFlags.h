@@ -81,11 +81,12 @@ public:
 //  ----------------------------------------------------------
     RMLPositionFlags(void)
     {
-        this->SynchronizationBehavior                       =   RMLFlags::PHASE_SYNCHRONIZATION_IF_POSSIBLE ;
+        this->SynchronizationBehavior                       =	RMLFlags::PHASE_SYNCHRONIZATION_IF_POSSIBLE ;
         this->BehaviorAfterFinalStateOfMotionIsReached      =   RMLPositionFlags::KEEP_TARGET_VELOCITY      ;
         this->EnableTheCalculationOfTheExtremumMotionStates =   true                                        ;
         this->KeepCurrentVelocityInCaseOfFallbackStrategy   =   false                                       ;
-    }
+		this->FilterTargetVelocity							=	RMLPositionFlags::LOOSE_ON_TARGET_VELOCITY	;
+	}
 
 
 //  ---------------------- Doxygen info ----------------------
@@ -155,7 +156,24 @@ public:
         RECOMPUTE_TRAJECTORY    =   1
     };
 
+	//! \enum TypeOfTheTargetEnum
+	//!
+	//! \brief
+	//! Enumeration whose values specify the type of the target pose
+	//!
+	enum TypeOfTheTargetEnum
+	{
+		//! \brief
+		//! We want the target speed be respected regardless of the trajectory
+		//! Reflexxe should handle these cases and the filteration proccess should be ignored
+		STRICT_ON_TARGET_VELOCITY = false,
 
+		//! \brief
+		//! We need to pass through the filteration process and change the Target Velocity (if applicable)
+		LOOSE_ON_TARGET_VELOCITY = true
+	};
+
+	bool FilterTargetVelocity;
 //  ---------------------- Doxygen info ----------------------
 //! \var int BehaviorAfterFinalStateOfMotionIsReached
 //!

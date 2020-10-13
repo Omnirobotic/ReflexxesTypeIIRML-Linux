@@ -49,7 +49,10 @@
 #include <RMLVector.h>
 #include <ReflexxesAPI.h>
 #include <RMLPositionFlags.h>
+#include <stdexcept>
+#include <string>
 
+#define EPSILON_Velocity 0.00001
 using namespace TypeIIRMLMath;
 
 
@@ -111,6 +114,10 @@ TypeIIRMLPosition::TypeIIRMLPosition(       const unsigned int  &DegreesOfFreedo
 
     this->Polynomials                                   =   new MotionPolynomials           [this->NumberOfDOFs];
 
+	this->_isTargetVelocityAdjusted						=   new RMLBoolVector(this->NumberOfDOFs);
+	this->_adjustedTargetVelocity						=   new RMLDoubleVector(this->NumberOfDOFs);
+	this->_velocityAdjustPercentage						=	new RMLDoubleVector(this->NumberOfDOFs);
+	this->_velocityAdjustCoefficient = 1;
     this->ZeroVector->Set(0.0);
 }
 
@@ -144,6 +151,9 @@ TypeIIRMLPosition::~TypeIIRMLPosition(void)
     delete      this->ZeroVector                                    ;
     delete      this->VelocityInputParameters                       ;
     delete      this->VelocityOutputParameters                      ;
+	delete		this->_adjustedTargetVelocity						;
+	delete		this->_velocityAdjustPercentage						;
+	delete		this->_isTargetVelocityAdjusted						;
 
     delete[]    (MotionPolynomials*)this->Polynomials               ;
 
@@ -175,6 +185,275 @@ TypeIIRMLPosition::~TypeIIRMLPosition(void)
     this->Polynomials                                   =   NULL    ;
 }
 
+
+void TypeIIRMLPosition::AdjustTargetVelocity(bool startANewCalculation, bool filterTargetVelocity)
+{
+	// NEW STRATEGY => Handle and AVOID only the MOVE-BACK motion from Reflexxes AND for the rest, just TRUST reflexxes
+	if (filterTargetVelocity)
+	{
+		if (startANewCalculation)
+		{
+			OutputParameters->TargetMotionStateIsFiltered = false;
+			_velocityAdjustCoefficient = 1.0;
+			for (auto i = 0; i < this->NumberOfDOFs; i++)
+			{
+				_velocityAdjustPercentage->VecData[i] = 1.0;
+				_isTargetVelocityAdjusted->VecData[i] = false;
+
+				if (CurrentInputParameters->CurrentVelocityVector->VecData[i] == 0) //CurVelocity = 0 => Decide based on where the TargPose and TargVelocity 
+				{
+					if (CurrentInputParameters->TargetVelocityVector->VecData[i] > 0)
+					{
+						if (CurrentInputParameters->CurrentPositionVector->VecData[i] >= CurrentInputParameters->TargetPositionVector->VecData[i])
+						{
+							// Target Behind the current state
+							printf("\n This case will be handled by REFLEXXES completely");
+							continue;
+						}
+						else
+						{
+							// Target in front of us => Just accel to reach
+							auto tempTargetPose = CurrentInputParameters->CurrentPositionVector->VecData[i] + 0.5*
+								pow2(CurrentInputParameters->TargetVelocityVector->VecData[i]) /
+								(CurrentInputParameters->MaxAccelerationVector->VecData[i]);
+
+							if (tempTargetPose <= CurrentInputParameters->TargetPositionVector->VecData[i])
+							{
+								// We can reach the target pose with the target speed
+								continue;
+							}
+							else // We will not reach the point with Desired Speed! Adjust the TargetSpeed !
+							{
+								auto v = 2 * CurrentInputParameters->MaxAccelerationVector->VecData[i] * 
+									(CurrentInputParameters->TargetPositionVector->VecData[i] - CurrentInputParameters->CurrentPositionVector->VecData[i]);
+								if (v < 0)
+								{
+									throw std::invalid_argument("Adjust Target Velocity Failed. Value for Speed [ " + std::to_string(v) + "] should be positive");								
+								}
+								_adjustedTargetVelocity->VecData[i] = sqrt(v) - EPSILON_Velocity;
+								_velocityAdjustPercentage->VecData[i] = (_adjustedTargetVelocity->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]) /
+									(CurrentInputParameters->TargetVelocityVector->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]);
+								_isTargetVelocityAdjusted->VecData[i] = true;
+								OutputParameters->TargetMotionStateIsFiltered = true;
+							}
+						}
+					}
+					else if (CurrentInputParameters->TargetVelocityVector->VecData[i] < 0)
+					{
+						if (CurrentInputParameters->CurrentPositionVector->VecData[i] <= CurrentInputParameters->TargetPositionVector->VecData[i])
+						{
+							printf("\n This case will be handled by REFLEXXES completely");
+							continue;
+						}
+						else    // Target in front of us => Just Decel to reach it
+						{
+							auto tempTargetPose = CurrentInputParameters->CurrentPositionVector->VecData[i] + 0.5*
+								pow2(CurrentInputParameters->TargetVelocityVector->VecData[i]) /
+								(-CurrentInputParameters->MaxAccelerationVector->VecData[i]);
+
+							if (tempTargetPose >= CurrentInputParameters->TargetPositionVector->VecData[i])
+							{
+								// We can reach the target pose with the target speed
+								continue;
+							}
+							else // We will not reach the point with Desired Speed! Adjust the TargetSpeed !
+							{
+								auto v = -2 * CurrentInputParameters->MaxAccelerationVector->VecData[i] * (CurrentInputParameters->TargetPositionVector->VecData[i] - CurrentInputParameters->CurrentPositionVector->VecData[i]);
+								if (v < 0)
+								{
+									throw std::invalid_argument("Adjust Target Velocity Failed. Value for Speed [ " + std::to_string(v) + "] should be positive");
+								}
+								_adjustedTargetVelocity->VecData[i] = -sqrt(v) + EPSILON_Velocity;
+								_velocityAdjustPercentage->VecData[i] = (_adjustedTargetVelocity->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]) /
+									(CurrentInputParameters->TargetVelocityVector->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]);
+								_isTargetVelocityAdjusted->VecData[i] = true;
+								if (!OutputParameters->TargetMotionStateIsFiltered)
+									this->OutputParameters->TargetMotionStateIsFiltered = true;
+							}
+						}
+					}
+					else // TargVelocity = CurVelocity = 0
+					{
+						printf("\n This case will be handled by REFLEXXES completely \n");
+						continue;
+					}
+				}
+				else if (CurrentInputParameters->CurrentVelocityVector->VecData[i] > 0) //CurVelocity > 0 
+				{
+					if (CurrentInputParameters->CurrentVelocityVector->VecData[i] <= CurrentInputParameters->TargetVelocityVector->VecData[i])
+					{
+						// TargVelocity >= CurVelocity >= 0
+						// We should accelerate with a_max to Reach!
+						if (CurrentInputParameters->CurrentPositionVector->VecData[i] >= CurrentInputParameters->TargetPositionVector->VecData[i])
+							// TargetPose Behind CurrentPose
+							continue; // Let reflex handle this
+						else
+						{
+							auto tempTargetPose = CurrentInputParameters->CurrentPositionVector->VecData[i] + 0.5*
+								(pow2(CurrentInputParameters->TargetVelocityVector->VecData[i]) - pow2(CurrentInputParameters->CurrentVelocityVector->VecData[i])) / (CurrentInputParameters->MaxAccelerationVector->VecData[i]);
+							if (tempTargetPose <= CurrentInputParameters->TargetPositionVector->VecData[i])
+							{
+								// We can reach the target pose with the target speed
+								continue;
+							}
+							else // We will not reach the point with Desired Speed! Adjust the TargetSpeed !
+							{
+								auto v = pow2(CurrentInputParameters->CurrentVelocityVector->VecData[i]) + (2 * CurrentInputParameters->MaxAccelerationVector->VecData[i] * (CurrentInputParameters->TargetPositionVector->VecData[i] - CurrentInputParameters->CurrentPositionVector->VecData[i]));
+								if (v < 0)
+								{
+									throw std::invalid_argument("Adjust Target Velocity Failed. Value for Speed [ " + std::to_string(v) + "] should be positive");								
+								}
+								_adjustedTargetVelocity->VecData[i] = sqrt(v) - EPSILON_Velocity;
+								_velocityAdjustPercentage->VecData[i] = (_adjustedTargetVelocity->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]) /
+									(CurrentInputParameters->TargetVelocityVector->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]);
+								_isTargetVelocityAdjusted->VecData[i] = true;
+								if (!OutputParameters->TargetMotionStateIsFiltered)
+									this->OutputParameters->TargetMotionStateIsFiltered = true;
+							}
+						}
+					}
+					else //  CurVelocity > TargetVelocity 
+					{
+						if (CurrentInputParameters->TargetVelocityVector->VecData[i] >= 0) // (CurVelocity > TargetVelocity >= 0 ) Decelerate BUT Direction didn't change
+						{
+							if (CurrentInputParameters->CurrentPositionVector->VecData[i] >= CurrentInputParameters->TargetPositionVector->VecData[i])
+								// TargetPose Behind CurrentPose
+								continue; // Let reflex handle this
+							else
+							{
+								auto tempTargetPose = CurrentInputParameters->CurrentPositionVector->VecData[i] + 0.5*
+									(pow2(CurrentInputParameters->TargetVelocityVector->VecData[i]) - pow2(CurrentInputParameters->CurrentVelocityVector->VecData[i])) / (-CurrentInputParameters->MaxAccelerationVector->VecData[i]);
+
+								if (tempTargetPose <= CurrentInputParameters->TargetPositionVector->VecData[i]) // We will reach desired Speed before the target
+								{
+									continue;
+								}
+								else // We Are Not Able to reach desired Speed before the target => Adjust Desired Speed
+								{
+									auto v = pow2(CurrentInputParameters->CurrentVelocityVector->VecData[i]) + (-2 * CurrentInputParameters->MaxAccelerationVector->VecData[i] * (CurrentInputParameters->TargetPositionVector->VecData[i] - CurrentInputParameters->CurrentPositionVector->VecData[i]));
+									if (v < 0)
+									{
+										throw std::invalid_argument("Adjust Target Velocity Failed. Value for Speed [ " + std::to_string(v) + "] should be positive");
+									}
+									_adjustedTargetVelocity->VecData[i] = sqrt(v) + EPSILON_Velocity;
+									_velocityAdjustPercentage->VecData[i] = (_adjustedTargetVelocity->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]) /
+										(CurrentInputParameters->TargetVelocityVector->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]);
+									_isTargetVelocityAdjusted->VecData[i] = true;
+									if (!OutputParameters->TargetMotionStateIsFiltered)
+										this->OutputParameters->TargetMotionStateIsFiltered = true;
+								}
+							}
+						}
+						else // Direction Changed!!!	TargVelocity < 0 < CurVelocity 
+							continue; //Let Reflex Handle it
+					}
+				}
+				else //CurVelocity <0 
+				{
+					if (CurrentInputParameters->CurrentVelocityVector->VecData[i] >= CurrentInputParameters->TargetVelocityVector->VecData[i]) //	0 > v_cur >= v_targ
+					{
+						if (CurrentInputParameters->CurrentPositionVector->VecData[i] <= CurrentInputParameters->TargetPositionVector->VecData[i])
+							// TargetPose Behind CurrentPose
+							continue;
+						else
+						{
+							auto tempTargetPose = CurrentInputParameters->CurrentPositionVector->VecData[i] + 0.5*
+								(pow2(CurrentInputParameters->TargetVelocityVector->VecData[i]) - pow2(CurrentInputParameters->CurrentVelocityVector->VecData[i])) / (-CurrentInputParameters->MaxAccelerationVector->VecData[i]);
+
+							if (tempTargetPose >= CurrentInputParameters->TargetPositionVector->VecData[i])
+							{
+								// We can reach the target pose with the target speed
+								continue;
+							}
+							else // We will not reach the point with Desired Speed! Adjust the TargetSpeed !
+							{
+								auto v = pow2(CurrentInputParameters->CurrentVelocityVector->VecData[i]) + (-2 * CurrentInputParameters->MaxAccelerationVector->VecData[i] * (CurrentInputParameters->TargetPositionVector->VecData[i] - CurrentInputParameters->CurrentPositionVector->VecData[i]));
+								if (v < 0)
+								{
+									throw std::invalid_argument("Adjust Target Velocity Failed. Value for Speed [ " + std::to_string(v) + "] should be positive");
+								}
+								_adjustedTargetVelocity->VecData[i] = -sqrt(v) + EPSILON_Velocity;
+								_velocityAdjustPercentage->VecData[i] = (_adjustedTargetVelocity->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]) /
+									(CurrentInputParameters->TargetVelocityVector->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]);
+
+								_isTargetVelocityAdjusted->VecData[i] = true;
+								if (!OutputParameters->TargetMotionStateIsFiltered)
+									this->OutputParameters->TargetMotionStateIsFiltered = true;
+							}
+						}
+					}
+					else // V_cur < V_Targ
+					{
+						if (CurrentInputParameters->TargetVelocityVector->VecData[i] <= 0) // (CurVelocity < TargetVelocity < 0 ) Decelerate BUT Direction didn't change
+						{
+							if (CurrentInputParameters->CurrentPositionVector->VecData[i] <= CurrentInputParameters->TargetPositionVector->VecData[i])
+								// TargetPose Behind CurrentPose
+								continue;
+							else
+							{
+								auto tempTargetPose = CurrentInputParameters->CurrentPositionVector->VecData[i] + 0.5*
+									(pow2(CurrentInputParameters->TargetVelocityVector->VecData[i]) - pow2(CurrentInputParameters->CurrentVelocityVector->VecData[i])) / (CurrentInputParameters->MaxAccelerationVector->VecData[i]);
+
+								// To Validate . . .
+								if (tempTargetPose >= CurrentInputParameters->TargetPositionVector->VecData[i])
+								{
+									// We can reach the target pose with the target speed
+									continue;
+								}
+								else // We will not reach the point with Desired Speed! Adjust the TargetSpeed !
+								{
+									auto v = pow2(CurrentInputParameters->CurrentVelocityVector->VecData[i]) + (2 * CurrentInputParameters->MaxAccelerationVector->VecData[i] * (CurrentInputParameters->TargetPositionVector->VecData[i] - CurrentInputParameters->CurrentPositionVector->VecData[i]));
+									if (v < 0)
+									{
+										throw std::invalid_argument("Adjust Target Velocity Failed. Value for Speed [ " + std::to_string(v) + "] should be positive");
+									}
+									_adjustedTargetVelocity->VecData[i] = -sqrt(v) - EPSILON_Velocity;
+									_velocityAdjustPercentage->VecData[i] = (_adjustedTargetVelocity->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]) /
+										(CurrentInputParameters->TargetVelocityVector->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]);
+
+									_isTargetVelocityAdjusted->VecData[i] = true;
+									if (!OutputParameters->TargetMotionStateIsFiltered)
+										this->OutputParameters->TargetMotionStateIsFiltered = true;
+								}
+							}
+						}
+						else // V_cur < 0 < V_Targ
+						{
+							continue; //Let Reflex Handle it
+						}
+					}
+				}
+			} // end for each dof
+
+			double minimumPercentage = 1;
+			if (OutputParameters->TargetMotionStateIsFiltered) // Change Coefficient Only if the targetMotionState is filtered!
+			{
+				for (int i = 0; i < this->NumberOfDOFs; i++)
+				{
+					if (_velocityAdjustPercentage->VecData[i] < minimumPercentage)
+					{
+						minimumPercentage = _velocityAdjustPercentage->VecData[i];
+					}
+				}
+			}
+			_velocityAdjustCoefficient = minimumPercentage;
+
+			//Scale all DOFs based on the most limiting joint
+			for (int i = 0; i < this->NumberOfDOFs; i++)
+			{
+				_adjustedTargetVelocity->VecData[i] = CurrentInputParameters->CurrentVelocityVector->VecData[i] + _velocityAdjustCoefficient*
+					(CurrentInputParameters->TargetVelocityVector->VecData[i] - CurrentInputParameters->CurrentVelocityVector->VecData[i]);
+			}
+		} // end If(StartNewCalculation)
+		
+		for (auto i = 0; i < this->NumberOfDOFs; i++)
+		{
+			this->CurrentInputParameters->TargetVelocityVector->VecData[i] = this->_adjustedTargetVelocity->VecData[i];
+		}
+	}
+	else  // If the target is Strict, we need to set the flag to FALSE
+		OutputParameters->TargetMotionStateIsFiltered = false;
+}
 
 //****************************************************************************
 // GetNextStateOfMotion()
@@ -315,8 +594,10 @@ int TypeIIRMLPosition::GetNextStateOfMotion(    const RMLPositionInputParameters
     *(this->OldInputParameters)     =   InputValues ;
     this->OldFlags                  =   Flags       ;
 
+	AdjustTargetVelocity(StartANewCalculation , Flags.FilterTargetVelocity);
+
     if (StartANewCalculation)
-    {
+    {		
         *(this->StoredTargetPosition)   =   *(this->CurrentInputParameters->TargetPositionVector);
 
         this->CompareInitialAndTargetStateofMotion();

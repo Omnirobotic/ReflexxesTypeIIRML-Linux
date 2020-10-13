@@ -75,13 +75,28 @@ void TypeIIRMLMath::VToVMaxStep1(       double          *TotalTime
                                     ,   const double    &MaxVelocity
                                     ,   const double    &MaxAcceleration)
 {
-    double  TimeForCurrentStep  =   (*ThisCurrentVelocity - MaxVelocity)
-                                    / MaxAcceleration;
+	if (*ThisCurrentVelocity > 0)
+	{
+		double  TimeForCurrentStep = (*ThisCurrentVelocity - MaxVelocity)
+			/ MaxAcceleration;
 
-    *TotalTime              +=  TimeForCurrentStep;
-    *ThisCurrentPosition    +=  0.5 * (*ThisCurrentVelocity + MaxVelocity)
-                                * TimeForCurrentStep;
-    *ThisCurrentVelocity    =   MaxVelocity;
+		*TotalTime += TimeForCurrentStep;
+		*ThisCurrentPosition += 0.5 * (*ThisCurrentVelocity + MaxVelocity)
+			* TimeForCurrentStep;
+		*ThisCurrentVelocity = MaxVelocity;
+	}
+	else 
+	{
+		double maxVelNegative = -MaxVelocity;
+		
+		double  TimeForCurrentStep = (maxVelNegative - *ThisCurrentVelocity)
+			/ MaxAcceleration;
+
+		*TotalTime += TimeForCurrentStep;
+		*ThisCurrentPosition += 0.5 * (fabs(*ThisCurrentVelocity) + MaxVelocity)
+			* TimeForCurrentStep;
+		*ThisCurrentVelocity = maxVelNegative;
+	}
 
     return;
 }

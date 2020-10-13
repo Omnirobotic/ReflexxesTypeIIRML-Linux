@@ -115,6 +115,8 @@ protected:
 //  ----------------------------------------------------------
     RMLOutputParameters(const unsigned int DegreesOfFreedom)
     {
+		this->TargetMotionStateIsFiltered			=	false									;
+
         unsigned int    i                           =   0                                       ;
 
         this->TrajectoryIsPhaseSynchronized         =   false                                   ;
@@ -195,6 +197,8 @@ protected:
 //  ----------------------------------------------------------
     RMLOutputParameters(const RMLOutputParameters &OP)
     {
+		this->TargetMotionStateIsFiltered = OP.TargetMotionStateIsFiltered;
+
         unsigned int    i                           =   0                                                       ;
 
         this->TrajectoryIsPhaseSynchronized         =   OP.IsTrajectoryPhaseSynchronized()                      ;
@@ -345,6 +349,8 @@ public:
 //  ----------------------------------------------------------
     RMLOutputParameters &operator = (const RMLOutputParameters &OP)
     {
+		this->TargetMotionStateIsFiltered		=	OP.TargetMotionStateIsFiltered		;
+
         unsigned int        i                   =   0                                   ;
 
         this->NumberOfDOFs                      =   OP.NumberOfDOFs                     ;
@@ -352,7 +358,6 @@ public:
         this->ANewCalculationWasPerformed       =   OP.ANewCalculationWasPerformed      ;
         this->SynchronizationTime               =   OP.SynchronizationTime              ;
         this->DOFWithTheGreatestExecutionTime   =   OP.DOFWithTheGreatestExecutionTime  ;
-
         OP.GetNewPositionVector     (this->NewPositionVector                    )       ;
         OP.GetNewVelocityVector     (this->NewVelocityVector                    )       ;
         OP.GetNewAccelerationVector (this->NewAccelerationVector                )       ;
@@ -1412,6 +1417,12 @@ public:
         return((this->ExecutionTimes->VecData)[this->DOFWithTheGreatestExecutionTime]);
     }
 
+	//! \var bool TargetMotionStateIsFiltered
+	//!
+	//! \brief
+	//! Indicates, whether target motion state is filtered or not
+	//  ----------------------------------------------------------
+	bool                    TargetMotionStateIsFiltered;
 
 //  ---------------------- Doxygen info ----------------------
 //! \var bool ANewCalculationWasPerformed

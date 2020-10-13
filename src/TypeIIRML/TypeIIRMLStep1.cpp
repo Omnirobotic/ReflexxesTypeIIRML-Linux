@@ -75,7 +75,7 @@ void TypeIIRMLPosition::Step1(void)
     {
         if(this->CurrentInputParameters->SelectionVector->VecData[i])
         {
-            TypeIIRMLDecisionTree1A(        this->CurrentInputParameters->CurrentPositionVector->VecData        [i]
+			TypeIIRMLDecisionTree1A(        this->CurrentInputParameters->CurrentPositionVector->VecData        [i]
                                         ,   this->CurrentInputParameters->CurrentVelocityVector->VecData        [i]
                                         ,   this->CurrentInputParameters->TargetPositionVector->VecData         [i]
                                         ,   this->CurrentInputParameters->TargetVelocityVector->VecData         [i]

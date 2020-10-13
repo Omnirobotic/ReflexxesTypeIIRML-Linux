@@ -170,6 +170,7 @@ int main()
                                             ,   OP
                                             ,   Flags       );
 
+		printf("\n  Reflex Result: %d \t ", ResultValue);
         if (ResultValue < 0)
         {
             printf("An error occurred (%d).\n", ResultValue );
@@ -197,12 +198,22 @@ int main()
         *IP->CurrentPositionVector      =   *OP->NewPositionVector      ;
         *IP->CurrentVelocityVector      =   *OP->NewVelocityVector      ;
         *IP->CurrentAccelerationVector  =   *OP->NewAccelerationVector  ;
+
+		printf("\n  Reflex Position: %f \t %f \t %f", OP->NewPositionVector->VecData[0], OP->NewPositionVector->VecData[1], OP->NewPositionVector->VecData[2]);
+		printf("\n  Reflex Velocity: %f \t %f \t %f \n", OP->NewVelocityVector->VecData[0], OP->NewVelocityVector->VecData[1], OP->NewVelocityVector->VecData[2]);
+		printf("\n  Reflex Accel: %f \t %f \t %f \n", OP->NewAccelerationVector->VecData[0], OP->NewAccelerationVector->VecData[1], OP->NewAccelerationVector->VecData[2]);
+
+		//printf("\n  ************************************* ");
+		printf(" Required Time: %f \n", OP->GetSynchronizationTime());
+		printf(" Required Time: %f \n", OP->SynchronizationTime);
+
     }
 
     // ********************************************************************
     // Deleting the objects of the Reflexxes Motion Library end terminating
     // the process
-
+	printf("Press any key to exit.");
+	getchar();
     delete  RML         ;
     delete  IP          ;
     delete  OP          ;
